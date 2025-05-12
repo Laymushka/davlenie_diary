@@ -2,8 +2,8 @@ from aiogram import Bot, Dispatcher, executor, types
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
 import sqlite3
 from datetime import datetime
-
 import os
+
 API_TOKEN = os.getenv('API_TOKEN')
 
 bot = Bot(token=API_TOKEN)
@@ -61,12 +61,16 @@ async def handle_entry(message: types.Message):
 
         await message.answer("✅ Запись сохранена!")
 
-    except Exception as e:
+    except ValueError as e:
+        # Ошибка при преобразовании данных
         print(f"Ошибка: {str(e)}")  # Отладочная информация
         await message.answer(f"⚠️ Ошибка. Проверьте формат данных. Ошибка: {str(e)}")
 
     except Exception as e:
+        # Любая другая ошибка
+        print(f"Ошибка: {str(e)}")  # Отладочная информация
         await message.answer(f"⚠️ Ошибка. Проверьте формат данных. Ошибка: {str(e)}")
+
 @dp.message_handler(lambda message: message.text == "📃 Посмотреть дневник")
 async def show_diary(message: types.Message):
     cursor.execute("SELECT date, systolic, diastolic, pulse FROM pressure WHERE user_id = ? ORDER BY date DESC LIMIT 10", (message.from_user.id,))
@@ -78,5 +82,6 @@ async def show_diary(message: types.Message):
         await message.answer(text)
     else:
         await message.answer("📭 У вас пока нет записей.")
+
 if __name__ == '__main__':
     executor.start_polling(dp, skip_updates=True)
