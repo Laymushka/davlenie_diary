@@ -80,10 +80,24 @@ async def handle_past_entry(message: types.Message):
         
         # Время будет текущее, а дата - введенная пользователем
         date, time = get_now()
-        cursor.execute("INSERT INTO pressure (user_id, date, time, systolic, diastolic, pulse, note) VALUES (?, ?, ?, ?, ?, ?, ?)",
-                       (message.from_user.id, past_date, time, systolic, diastolic, pulse, ''))
-        conn.commit()
-        await message.answer(f"✅ Запись за {past_date} сохранена!")
+        
+        # Проверка, существует ли уже запись за эту дату
+        cursor.execute("SELECT rowid FROM pressure WHERE user_id = ? AND date = ? ORDER BY time DESC LIMIT 1", (message.from_user.id, past_date))
+        existing_entry = cursor.fetchone()
+
+        if existing_entry:
+            # Если запись существует, редактируем ее
+            cursor.execute("UPDATE pressure SET systolic = ?, diastolic = ?, pulse = ? WHERE rowid = ?",
+                           (systolic, diastolic, pulse, existing_entry[0]))
+            conn.commit()
+            await message.answer(f"✅ Запись за {past_date} была обновлена!")
+        else:
+            # Если записи нет, создаём новую
+            cursor.execute("INSERT INTO pressure (user_id, date, time, systolic, diastolic, pulse, note) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                           (message.from_user.id, past_date, time, systolic, diastolic, pulse, ''))
+            conn.commit()
+            await message.answer(f"✅ Запись за {past_date} сохранена!")
+
     except ValueError:
         await message.answer("⚠️ Ошибка. Неправильный формат даты. Используйте формат: ГГГГ-ММ-ДД")
     except Exception as e:
