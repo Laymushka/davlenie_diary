@@ -35,21 +35,24 @@ async def start_handler(message: types.Message):
 async def new_entry(message: types.Message):
     await message.answer("Введите данные в формате: САД/ДАД Пульс (например: 120/80 72)")
 
-@dp.message_handler(lambda message: '/' not in message.text and message.text.replace(' ', '').isdigit() is False)
+@dp.message_handler(lambda message: '/' in message.text and message.text.replace(' ', '').replace('/', '').isdigit())
 async def handle_entry(message: types.Message):
     try:
+        # Разделение по пробелу, чтобы отделить давление от пульса
         parts = message.text.split()
-        print(f"Разделённый ввод: {parts}")  # Выводим, что приходит в сообщение
+        print(f"Разделённый ввод: {parts}")
 
+        # Разделение давления по '/'
         pressure = parts[0].split('/')
-        print(f"Давление: {pressure}")  # Проверяем, правильно ли разделилось давление
+        print(f"Давление: {pressure}")
 
+        # Преобразование в целые числа
         systolic = int(pressure[0])  # Систолическое давление
         diastolic = int(pressure[1])  # Диастолическое давление
 
         pulse = int(parts[1]) if len(parts) > 1 else 0  # Пульс (если есть)
 
-        # Добавляем запись в базу
+        # Добавление записи в базу данных
         cursor.execute("INSERT INTO pressure (user_id, date, systolic, diastolic, pulse, note) VALUES (?, ?, ?, ?, ?, ?)",
                        (message.from_user.id, datetime.now().strftime('%Y-%m-%d'), systolic, diastolic, pulse, ''))
         conn.commit()
@@ -58,7 +61,6 @@ async def handle_entry(message: types.Message):
 
     except Exception as e:
         await message.answer(f"⚠️ Ошибка. Проверьте формат данных. Ошибка: {str(e)}")
-
 @dp.message_handler(lambda message: message.text == "📃 Посмотреть дневник")
 async def show_diary(message: types.Message):
     cursor.execute("SELECT date, systolic, diastolic, pulse FROM pressure WHERE user_id = ? ORDER BY date DESC LIMIT 10", (message.from_user.id,))
