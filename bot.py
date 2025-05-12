@@ -9,12 +9,13 @@ API_TOKEN = os.getenv('API_TOKEN')
 bot = Bot(token=API_TOKEN)
 dp = Dispatcher(bot)
 
-# Инициализация базы данных
+# Инициализация базы данных с добавлением столбца времени
 conn = sqlite3.connect('pressure_diary.db')
 cursor = conn.cursor()
 cursor.execute('''CREATE TABLE IF NOT EXISTS pressure (
     user_id INTEGER,
     date TEXT,
+    time TEXT,
     systolic INTEGER,
     diastolic INTEGER,
     pulse INTEGER,
@@ -52,33 +53,30 @@ async def handle_entry(message: types.Message):
 
         pulse = int(parts[1]) if len(parts) > 1 else 0  # Пульс (если есть)
 
+        # Записываем текущее время
+        current_time = datetime.now().strftime('%H:%M:%S')
+
         # Добавление записи в базу данных
-        cursor.execute("INSERT INTO pressure (user_id, date, systolic, diastolic, pulse, note) VALUES (?, ?, ?, ?, ?, ?)",
-                       (message.from_user.id, datetime.now().strftime('%Y-%m-%d'), systolic, diastolic, pulse, ''))
+        cursor.execute("INSERT INTO pressure (user_id, date, time, systolic, diastolic, pulse, note) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                       (message.from_user.id, datetime.now().strftime('%Y-%m-%d'), current_time, systolic, diastolic, pulse, ''))
         conn.commit()
 
         print("Запись успешно добавлена в базу данных.")  # Отладочная информация
 
         await message.answer("✅ Запись сохранена!")
 
-    except ValueError as e:
-        # Ошибка при преобразовании данных
-        print(f"Ошибка: {str(e)}")  # Отладочная информация
-        await message.answer(f"⚠️ Ошибка. Проверьте формат данных. Ошибка: {str(e)}")
-
     except Exception as e:
-        # Любая другая ошибка
         print(f"Ошибка: {str(e)}")  # Отладочная информация
         await message.answer(f"⚠️ Ошибка. Проверьте формат данных. Ошибка: {str(e)}")
 
 @dp.message_handler(lambda message: message.text == "📃 Посмотреть дневник")
 async def show_diary(message: types.Message):
-    cursor.execute("SELECT date, systolic, diastolic, pulse FROM pressure WHERE user_id = ? ORDER BY date DESC LIMIT 10", (message.from_user.id,))
+    cursor.execute("SELECT date, time, systolic, diastolic, pulse FROM pressure WHERE user_id = ? ORDER BY date DESC, time DESC LIMIT 10", (message.from_user.id,))
     rows = cursor.fetchall()
     if rows:
         text = "📝 Последние записи:\n"
         for row in rows:
-            text += f"{row[0]} — {row[1]}/{row[2]}, пульс {row[3]}\n"
+            text += f"{row[0]} {row[1]} — {row[2]}/{row[3]}, пульс {row[4]}\n"
         await message.answer(text)
     else:
         await message.answer("📭 У вас пока нет записей.")
