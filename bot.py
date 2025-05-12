@@ -3,7 +3,8 @@ from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
 import sqlite3
 from datetime import datetime
 
-API_TOKEN = 'YOUR_BOT_TOKEN_HERE'
+import os
+API_TOKEN = os.getenv('API_TOKEN')
 
 bot = Bot(token=API_TOKEN)
 dp = Dispatcher(bot)
