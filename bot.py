@@ -107,7 +107,6 @@ async def show_diary(message: types.Message):
     cursor.execute("SELECT rowid, date, time, systolic, diastolic, pulse FROM pressure WHERE user_id = ? ORDER BY date DESC, time DESC", (message.from_user.id,))
     rows = cursor.fetchall()
     if rows:
-        text = "📝 Последние записи:\n"
         for row in rows:
             entry_text = f"{row[1]} {row[2]} — {row[3]}/{row[4]}, пульс {row[5]}"
             edit_button = InlineKeyboardButton("✏️ Редактировать", callback_data=f"edit_{row[0]}")
@@ -125,7 +124,6 @@ async def edit_entry_callback(query: types.CallbackQuery):
     if entry:
         await query.message.answer(f"Редактирование записи от {entry[0]} {entry[1]}.\nВведите новые данные в формате: САД/ДАД Пульс")
         await dp.bot.answer_callback_query(query.id)  # Закрыть кнопку после нажатия
-        # Далее обработчик обновления записи, чтобы перезаписать данные в базу
 
 @dp.callback_query_handler(lambda query: query.data.startswith("delete_"))
 async def delete_entry_callback(query: types.CallbackQuery):
