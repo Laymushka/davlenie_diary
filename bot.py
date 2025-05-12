@@ -55,14 +55,11 @@ async def show_diary(message: types.Message):
     cursor.execute("SELECT date, systolic, diastolic, pulse FROM pressure WHERE user_id = ? ORDER BY date DESC LIMIT 10", (message.from_user.id,))
     rows = cursor.fetchall()
     if rows:
-        text = "📝 Последние записи:
-"
+        text = "📝 Последние записи:\n"
         for row in rows:
-            text += f"{row[0]} — {row[1]}/{row[2]}, пульс {row[3]}
-"
+            text += f"{row[0]} — {row[1]}/{row[2]}, пульс {row[3]}\n"
         await message.answer(text)
     else:
         await message.answer("📭 У вас пока нет записей.")
-
 if __name__ == '__main__':
     executor.start_polling(dp, skip_updates=True)
