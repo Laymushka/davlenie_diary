@@ -103,37 +103,56 @@ async def show_diary(message: types.Message):
 
 @dp.message_handler(lambda message: message.text == "❌ Удалить последнюю запись")
 async def delete_last_entry(message: types.Message):
-    cursor.execute("SELECT rowid FROM pressure WHERE user_id = ? ORDER BY date DESC, time DESC LIMIT 1", (message.from_user.id,))
+    cursor.execute("SELECT rowid, date FROM pressure WHERE user_id = ? ORDER BY date DESC, time DESC LIMIT 1", (message.from_user.id,))
     last = cursor.fetchone()
     if last:
         cursor.execute("DELETE FROM pressure WHERE rowid = ?", (last[0],))
         conn.commit()
-        await message.answer("🗑 Последняя запись удалена.")
+        await message.answer(f"🗑 Запись за {last[1]} была удалена.")
     else:
         await message.answer("⚠️ У вас нет записей для удаления.")
 
 @dp.message_handler(lambda message: message.text == "✏️ Редактировать последнюю запись")
 async def edit_last_entry_prompt(message: types.Message):
-    await message.answer("Введите новые данные в формате: САД/ДАД Пульс (например: 120/80 72)")
+    await message.answer("Введите новые данные в формате: САД/ДАД Пульс (например: 120/80 72)\n\nЕсли хотите редактировать запись за прошедшую дату, напишите её в формате: дата (например, 2025-05-12), затем САД/ДАД Пульс.")
 
-@dp.message_handler(lambda message: '/' in message.text and any(trigger in message.text.lower() for trigger in ["редактировать", "редактировать"]))
-async def edit_last_entry(message: types.Message):
+@dp.message_handler(lambda message: '/' in message.text)
+async def edit_entry(message: types.Message):
     try:
         parts = message.text.split()
-        pressure = parts[0].split('/')
-        systolic = int(pressure[0])
-        diastolic = int(pressure[1])
-        pulse = int(parts[1]) if len(parts) > 1 else 0
+        if len(parts) == 2 and '-' in parts[0]:  # Это предполагаемая дата для редактирования
+            date_to_edit = parts[0]
+            pressure = parts[1].split('/')
+            systolic = int(pressure[0])
+            diastolic = int(pressure[1])
+            pulse = int(parts[2]) if len(parts) > 2 else 0
 
-        cursor.execute("SELECT rowid FROM pressure WHERE user_id = ? ORDER BY date DESC, time DESC LIMIT 1", (message.from_user.id,))
-        last = cursor.fetchone()
-        if last:
-            cursor.execute("UPDATE pressure SET systolic = ?, diastolic = ?, pulse = ? WHERE rowid = ?",
-                           (systolic, diastolic, pulse, last[0]))
-            conn.commit()
-            await message.answer("✅ Запись обновлена!")
+            # Пытаемся найти запись с указанной датой
+            cursor.execute("SELECT rowid FROM pressure WHERE user_id = ? AND date = ? ORDER BY time DESC LIMIT 1", (message.from_user.id, date_to_edit))
+            last = cursor.fetchone()
+            if last:
+                cursor.execute("UPDATE pressure SET systolic = ?, diastolic = ?, pulse = ? WHERE rowid = ?",
+                               (systolic, diastolic, pulse, last[0]))
+                conn.commit()
+                await message.answer(f"✅ Запись за {date_to_edit} обновлена!")
+            else:
+                await message.answer(f"⚠️ Не найдено записи за {date_to_edit} для редактирования.")
         else:
-            await message.answer("⚠️ У вас нет записей для редактирования.")
+            pressure = parts[0].split('/')
+            systolic = int(pressure[0])
+            diastolic = int(pressure[1])
+            pulse = int(parts[1]) if len(parts) > 1 else 0
+
+            # Редактируем последнюю запись
+            cursor.execute("SELECT rowid FROM pressure WHERE user_id = ? ORDER BY date DESC, time DESC LIMIT 1", (message.from_user.id,))
+            last = cursor.fetchone()
+            if last:
+                cursor.execute("UPDATE pressure SET systolic = ?, diastolic = ?, pulse = ? WHERE rowid = ?",
+                               (systolic, diastolic, pulse, last[0]))
+                conn.commit()
+                await message.answer("✅ Последняя запись обновлена!")
+            else:
+                await message.answer("⚠️ У вас нет записей для редактирования.")
     except Exception as e:
         await message.answer(f"⚠️ Ошибка. Проверьте формат данных. Ошибка: {str(e)}")
 
