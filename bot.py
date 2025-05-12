@@ -88,8 +88,7 @@ async def delete_last_entry(message: types.Message):
 async def edit_last_entry_prompt(message: types.Message):
     await message.answer("Введите новые данные в формате: САД/ДАД Пульс (например: 120/80 72)")
 
-@dp.message_handler(lambda message: '/' in message.text and """
-                   any(trigger in message.text for trigger in ["редактировать", "Редактировать"]))
+@dp.message_handler(lambda message: '/' in message.text and any(trigger in message.text.lower() for trigger in ["редактировать", "редактировать"]))
 async def edit_last_entry(message: types.Message):
     try:
         parts = message.text.split()
