@@ -39,16 +39,25 @@ async def new_entry(message: types.Message):
 async def handle_entry(message: types.Message):
     try:
         parts = message.text.split()
+        print(f"Разделённый ввод: {parts}")  # Выводим, что приходит в сообщение
+
         pressure = parts[0].split('/')
-        systolic = int(pressure[0])
-        diastolic = int(pressure[1])
-        pulse = int(parts[1]) if len(parts) > 1 else 0
+        print(f"Давление: {pressure}")  # Проверяем, правильно ли разделилось давление
+
+        systolic = int(pressure[0])  # Систолическое давление
+        diastolic = int(pressure[1])  # Диастолическое давление
+
+        pulse = int(parts[1]) if len(parts) > 1 else 0  # Пульс (если есть)
+
+        # Добавляем запись в базу
         cursor.execute("INSERT INTO pressure (user_id, date, systolic, diastolic, pulse, note) VALUES (?, ?, ?, ?, ?, ?)",
                        (message.from_user.id, datetime.now().strftime('%Y-%m-%d'), systolic, diastolic, pulse, ''))
         conn.commit()
+
         await message.answer("✅ Запись сохранена!")
-    except:
-        await message.answer("⚠️ Ошибка. Убедитесь, что вы ввели данные в правильном формате.")
+
+    except Exception as e:
+        await message.answer(f"⚠️ Ошибка. Проверьте формат данных. Ошибка: {str(e)}")
 
 @dp.message_handler(lambda message: message.text == "📃 Посмотреть дневник")
 async def show_diary(message: types.Message):
