@@ -61,6 +61,34 @@ async def handle_entry(message: types.Message):
     except Exception as e:
         await message.answer(f"⚠️ Ошибка. Проверьте формат данных. Ошибка: {str(e)}")
 
+@dp.message_handler(lambda message: message.text == "🗓 Запись за прошедшую дату")
+async def past_entry_prompt(message: types.Message):
+    await message.answer("Для того чтобы сделать запись за прошедшую дату, введите данные в формате: САД/ДАД Пульс Дата (например: 120/80 72 2025-05-10)")
+
+@dp.message_handler(lambda message: '/' in message.text and message.text.replace(' ', '').replace('/', '').isdigit() and len(message.text.split()) == 3)
+async def handle_past_entry(message: types.Message):
+    try:
+        parts = message.text.split()
+        pressure = parts[0].split('/')
+        systolic = int(pressure[0])
+        diastolic = int(pressure[1])
+        pulse = int(parts[1]) if len(parts) > 1 else 0
+        past_date = parts[2]
+
+        # Проверяем, что дата имеет правильный формат
+        datetime.strptime(past_date, '%Y-%m-%d')  # Если дата неправильная, возникнет ошибка ValueError
+        
+        # Время будет текущее, а дата - введенная пользователем
+        date, time = get_now()
+        cursor.execute("INSERT INTO pressure (user_id, date, time, systolic, diastolic, pulse, note) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                       (message.from_user.id, past_date, time, systolic, diastolic, pulse, ''))
+        conn.commit()
+        await message.answer(f"✅ Запись за {past_date} сохранена!")
+    except ValueError:
+        await message.answer("⚠️ Ошибка. Неправильный формат даты. Используйте формат: ГГГГ-ММ-ДД")
+    except Exception as e:
+        await message.answer(f"⚠️ Ошибка. Проверьте формат данных. Ошибка: {str(e)}")
+
 @dp.message_handler(lambda message: message.text == "📃 Посмотреть дневник")
 async def show_diary(message: types.Message):
     cursor.execute("SELECT date, time, systolic, diastolic, pulse FROM pressure WHERE user_id = ? ORDER BY date DESC, time DESC LIMIT 10", (message.from_user.id,))
