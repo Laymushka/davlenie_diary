@@ -57,7 +57,13 @@ async def handle_entry(message: types.Message):
                        (message.from_user.id, datetime.now().strftime('%Y-%m-%d'), systolic, diastolic, pulse, ''))
         conn.commit()
 
+        print("Запись успешно добавлена в базу данных.")  # Отладочная информация
+
         await message.answer("✅ Запись сохранена!")
+
+    except Exception as e:
+        print(f"Ошибка: {str(e)}")  # Отладочная информация
+        await message.answer(f"⚠️ Ошибка. Проверьте формат данных. Ошибка: {str(e)}")
 
     except Exception as e:
         await message.answer(f"⚠️ Ошибка. Проверьте формат данных. Ошибка: {str(e)}")
